@@ -3,7 +3,10 @@ import sqlite3
 from datetime import datetime
 import os
 
-DB_NAME = 'tiendita.db'
+APPDATA_DIR = os.path.join(os.getenv("APPDATA"), "MiniMarketPOS")
+os.makedirs(APPDATA_DIR, exist_ok=True)
+
+DB_NAME = os.path.join(APPDATA_DIR, "tiendita.db")
 
 def conectar():
     return sqlite3.connect(DB_NAME)
@@ -93,10 +96,11 @@ def ventas_del_dia():
 def generar_ticket(codigo, nombre, cantidad, precio_unitario, total):
     hoy = datetime.now().strftime('%Y%m%d_%H%M%S')
     nombre_archivo = f"ticket_{codigo}_{hoy}.txt"
-    ruta = os.path.join("tickets", nombre_archivo)
-    
-    if not os.path.exists("tickets"):
-        os.makedirs("tickets")
+
+    tickets_folder = os.path.join(APPDATA_DIR, "tickets")
+    os.makedirs(tickets_folder, exist_ok=True)
+
+    ruta = os.path.join(tickets_folder, nombre_archivo)
 
     with open(ruta, "w", encoding="utf-8") as f:
         f.write("==== MINI MARKET POS ====\n")
