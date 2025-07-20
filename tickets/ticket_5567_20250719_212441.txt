@@ -1,0 +1,10 @@
+==== MINI MARKET POS ====
+Fecha: 2025-07-19 21:24:41
+--------------------------
+Código: 5567
+Producto: hhhdh
+Cantidad: 10
+Precio unitario: $145.00
+Total: $1450.00
+==========================
+¡Gracias por su compra!
