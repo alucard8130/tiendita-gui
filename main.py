@@ -1,7 +1,17 @@
 def ventana_registrar_compra():
     win = tk.Toplevel()
+    win.transient(None)  # No bloquea el root
+    win.grab_set()  # Permite interacción con otras ventanas
     win.title("Registrar compra")
-    win.geometry("500x500")
+    win.geometry("500x420")
+
+    # Centrar ventana
+    win.update_idletasks()
+    width = 500
+    height = 420
+    x = (win.winfo_screenwidth() // 2) - (width // 2)
+    y = (win.winfo_screenheight() // 2) - (height // 2)
+    win.geometry(f"{width}x{height}+{x}+{y}")
 
     frame = ttk.Frame(win, padding=20)
     frame.pack(fill="both", expand=True)
@@ -25,20 +35,56 @@ def ventana_registrar_compra():
 
     def guardar():
         try:
-            nombre = entradas["nombre"].get()
-            descripcion = entradas["descripcion"].get()
-            # tipo = entradas["tipo"].get() or None
-            marca = entradas["marca"].get() or None
-            cantidad = int(entradas["cantidad"].get())
-            costo = float(entradas["costo"].get())
-            precio = entradas["precio"].get()
-            precio = float(precio) if precio else None
-            codigo = entradas["codigo"].get() or None
-            proveedor = entradas["proveedor"].get() or None
+            nombre = entradas["nombre"].get().strip()
+            descripcion = entradas["descripcion"].get().strip()
+            marca = entradas["marca"].get().strip() or None
+            cantidad_str = entradas["cantidad"].get().strip()
+            costo_str = entradas["costo"].get().strip()
+            precio_str = entradas["precio"].get().strip()
+            codigo = entradas["codigo"].get().strip() or None
+            proveedor = entradas["proveedor"].get().strip() or None
+
+            if not nombre:
+                messagebox.showerror("Error", "Debes ingresar el nombre del producto.")
+                return
+            if not cantidad_str:
+                messagebox.showerror("Error", "Debes ingresar la cantidad.")
+                return
+            if not costo_str:
+                messagebox.showerror("Error", "Debes ingresar el costo.")
+                return
+            try:
+                cantidad = int(cantidad_str)
+                if cantidad <= 0:
+                    raise ValueError
+            except ValueError:
+                messagebox.showerror(
+                    "Error", "Cantidad inválida. Debe ser un número entero positivo."
+                )
+                return
+            try:
+                costo = float(costo_str)
+                if costo < 0:
+                    raise ValueError
+            except ValueError:
+                messagebox.showerror(
+                    "Error", "Costo inválido. Debe ser un número positivo."
+                )
+                return
+            precio = None
+            if precio_str:
+                try:
+                    precio = float(precio_str)
+                    if precio < 0:
+                        raise ValueError
+                except ValueError:
+                    messagebox.showerror(
+                        "Error", "Precio inválido. Debe ser un número positivo."
+                    )
+                    return
             database.registrar_compra(
                 nombre,
                 descripcion,
-                # tipo,
                 marca,
                 cantidad,
                 costo,
@@ -95,58 +141,60 @@ database.inicializar_db()
 #             print(f"Error en compra masiva: {compra.get('nombre')}: {e}")
 
 
-def ventana_agregar_producto():
-    win = tk.Toplevel()
-    win.title("Agregar producto")
-    win.geometry("400x300")
+# def ventana_agregar_producto():
+#     win = tk.Toplevel()
+#     win.title("Agregar producto")
+#     win.geometry("400x300")
 
-    style = ttk.Style()
-    style.configure("TEntry", font=("Segoe UI", 12))
-    style.configure("TLabel", font=("Segoe UI", 12))
+#     style = ttk.Style()
+#     style.configure("TEntry", font=("Segoe UI", 12))
+#     style.configure("TLabel", font=("Segoe UI", 12))
 
-    frame = ttk.Frame(win, padding=20)
-    frame.pack(fill="both", expand=True)
+#     frame = ttk.Frame(win, padding=20)
+#     frame.pack(fill="both", expand=True)
 
-    labels = [
-        ("Nombre", "nombre"),
-        ("Tipo", "tipo"),
-        ("Marca", "marca"),
-        ("Stock inicial", "stock"),
-        ("Costo compra", "costo"),
-        ("Precio venta", "precio"),
-        ("Descripción", "descripcion"),
-        ("Código de barras (opcional)", "codigo"),
-    ]
-    entradas = {}
-    for i, (label, key) in enumerate(labels):
-        ttk.Label(frame, text=label + ":").grid(row=i, column=0, sticky="w", pady=5)
-        ent = ttk.Entry(frame)
-        ent.grid(row=i, column=1, pady=5)
-        entradas[key] = ent
+#     labels = [
+#         ("Nombre", "nombre"),
+#         ("Tipo", "tipo"),
+#         ("Marca", "marca"),
+#         ("Stock inicial", "stock"),
+#         ("Costo compra", "costo"),
+#         ("Precio venta", "precio"),
+#         ("Descripción", "descripcion"),
+#         ("Código de barras (opcional)", "codigo"),
+#     ]
+#     entradas = {}
+#     for i, (label, key) in enumerate(labels):
+#         ttk.Label(frame, text=label + ":").grid(row=i, column=0, sticky="w", pady=5)
+#         ent = ttk.Entry(frame)
+#         ent.grid(row=i, column=1, pady=5)
+#         entradas[key] = ent
 
-    def guardar():
-        try:
-            nombre = entradas["nombre"].get()
-            tipo = entradas["tipo"].get() or None
-            marca = entradas["marca"].get() or None
-            stock = int(entradas["stock"].get())
-            costo = float(entradas["costo"].get())
-            precio = float(entradas["precio"].get())
-            descripcion = entradas["descripcion"].get() or None
-            codigo = entradas["codigo"].get() or None
-            database.agregar_producto(codigo, nombre, precio, stock)
-            messagebox.showinfo("Éxito", "Producto guardado correctamente")
-            win.destroy()
-        except Exception as e:
-            messagebox.showerror("Error", str(e))
+#     def guardar():
+#         try:
+#             nombre = entradas["nombre"].get()
+#             tipo = entradas["tipo"].get() or None
+#             marca = entradas["marca"].get() or None
+#             stock = int(entradas["stock"].get())
+#             costo = float(entradas["costo"].get())
+#             precio = float(entradas["precio"].get())
+#             descripcion = entradas["descripcion"].get() or None
+#             codigo = entradas["codigo"].get() or None
+#             database.agregar_producto(codigo, nombre, precio, stock)
+#             messagebox.showinfo("Éxito", "Producto guardado correctamente")
+#             win.destroy()
+#         except Exception as e:
+#             messagebox.showerror("Error", str(e))
 
-    ttk.Button(frame, text="Guardar", command=guardar).grid(
-        row=len(labels), column=0, columnspan=2, pady=15
-    )
+#     ttk.Button(frame, text="Guardar", command=guardar).grid(
+#         row=len(labels), column=0, columnspan=2, pady=15
+#     )
 
 
 def ventana_ver_productos():
     win = tk.Toplevel()
+    win.transient(None)
+    win.grab_set()
     win.title("Lista de productos")
     win.geometry("1250x500")
 
@@ -191,8 +239,18 @@ def ventana_ver_productos():
 
 def ventana_registrar_venta():
     win = tk.Toplevel()
+    win.transient(None)
+    win.grab_set()
     win.title("Registrar venta")
-    win.geometry("400x250")
+    win.geometry("350x280")
+
+    # Centrar ventana
+    win.update_idletasks()
+    width = 350
+    height = 280
+    x = (win.winfo_screenwidth() // 2) - (width // 2)
+    y = (win.winfo_screenheight() // 2) - (height // 2)
+    win.geometry(f"{width}x{height}+{x}+{y}")
 
     frame = ttk.Frame(win, padding=20)
     frame.pack(fill="both", expand=True)
@@ -220,16 +278,36 @@ def ventana_registrar_venta():
 
     def vender():
         try:
-            cant = int(cantidad.get())
             seleccion = producto_var.get()
             if not seleccion:
                 messagebox.showerror("Error", "Selecciona un producto")
                 return
-            precio_input = precio_venta.get()
+            cantidad_str = cantidad.get().strip()
+            precio_input = precio_venta.get().strip()
+            if not cantidad_str:
+                messagebox.showerror("Error", "Ingresa la cantidad")
+                return
             if not precio_input:
                 messagebox.showerror("Error", "Ingresa el precio de venta")
                 return
-            precio = float(precio_input)
+            try:
+                cant = int(cantidad_str)
+                if cant <= 0:
+                    raise ValueError
+            except ValueError:
+                messagebox.showerror(
+                    "Error", "Cantidad inválida. Debe ser un número entero positivo."
+                )
+                return
+            try:
+                precio = float(precio_input)
+                if precio < 0:
+                    raise ValueError
+            except ValueError:
+                messagebox.showerror(
+                    "Error", "Precio inválido. Debe ser un número positivo."
+                )
+                return
             idx = opciones.index(seleccion)
             prod = productos[idx]
             id_producto = prod[0]  # Usar el ID del producto
@@ -247,8 +325,8 @@ def ventana_registrar_venta():
                     "Error",
                     "No se pudo realizar la venta (producto no encontrado o stock insuficiente)",
                 )
-        except ValueError:
-            messagebox.showerror("Error", "Cantidad o precio inválido")
+        except Exception as e:
+            messagebox.showerror("Error", str(e))
 
     ttk.Button(frame, text="Vender", command=vender).grid(
         row=4, column=0, columnspan=2, pady=15
@@ -257,6 +335,8 @@ def ventana_registrar_venta():
 
 def ventana_ventas_dia():
     win = tk.Toplevel()
+    win.transient(None)
+    win.grab_set()
     win.title("Ventas del día")
     win.geometry("1200x500")
 
@@ -316,16 +396,22 @@ def main():
 
     root = tk.Tk()
     root.title("🛒 Mini Market POS")
-    root.geometry("600x500")
+    root.geometry("900x500")
     root.configure(bg="white")
 
-    # Centrar ventana
+    # Centrar ventana y deshabilitar movimiento
     root.update_idletasks()
-    width = 600
+    width = 900
     height = 500
     x = (root.winfo_screenwidth() // 2) - (width // 2)
     y = (root.winfo_screenheight() // 2) - (height // 2)
     root.geometry(f"{width}x{height}+{x}+{y}")
+    root.resizable(False, False)
+
+    def disable_event():
+        pass
+
+    root.protocol("WM_MOVING", disable_event)
 
     # Estilo general
     style = ttk.Style()
@@ -345,11 +431,38 @@ def main():
     # Título
     ttk.Label(root, text="Mini Market POS", style="Title.TLabel").pack(pady=20)
 
+    # Footer moderno con copyright y web
+    def abrir_web():
+        import webbrowser
+
+        webbrowser.open_new("https://paginaweb-ro9v.onrender.com")  # Cambia por tu URL real
+
+    footer = ttk.Frame(root)
+    footer.pack(side="bottom", fill="x", pady=(15, 0))
+
+    copyright_label = ttk.Label(
+        footer,
+        text="© 2025 Mini Market POS | Todos los derechos reservados Jaime Martin Estrada Bernabe",
+        font=("Segoe UI", 10),
+        foreground="#555",
+    )
+    copyright_label.pack(side="left", padx=15)
+
+    web_label = ttk.Label(
+        footer,
+        text="VISITA NUESTRA WEB PARA MAS PRODUCTOS",
+        foreground="#007acc",
+        cursor="hand2",
+        font=("Segoe UI", 10, "underline"),
+    )
+    web_label.pack(side="right", padx=15)
+    web_label.bind("<Button-1>", lambda e: abrir_web())
+
     # Botones principales
     # ttk.Button(root, text="➕ Agregar producto", command=ventana_agregar_producto).pack(
     #     pady=6
     # )
-    ttk.Button(root, text="📦 Ver productos", command=ventana_ver_productos).pack(
+    ttk.Button(root, text="📦 Ver Inventario", command=ventana_ver_productos).pack(
         pady=6
     )
     ttk.Button(root, text="🛒 Registrar compra", command=ventana_registrar_compra).pack(
