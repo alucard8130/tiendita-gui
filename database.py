@@ -2,6 +2,7 @@ import sqlite3
 from datetime import datetime
 import os
 
+
 DB_LOCAL = "tiendita.db"
 
 APPDATA_DIR = os.path.join(os.getenv("APPDATA"), "MiniMarketPOS")
@@ -9,8 +10,8 @@ os.makedirs(APPDATA_DIR, exist_ok=True)
 
 DB_PROD = os.path.join(APPDATA_DIR, "tiendita.db")
 
-# Alterna entre local y producción con una variable o 
-#default 0 = usa la base de produccion
+# Alterna entre local y producción con una variable o
+# default 0 = usa la base de produccion
 USE_LOCAL_DB = os.getenv("TIENDITA_LOCAL_DB", "0") == "1"
 
 
@@ -170,10 +171,11 @@ def registrar_venta(id_producto, cantidad):
     return None, None, None
 
 
-def ventas_del_dia():
+def ventas_del_dia(fecha=None):
     conn = conectar()
     cursor = conn.cursor()
-    hoy = datetime.now().strftime("%Y-%m-%d")
+    if fecha is None:
+        fecha = datetime.now().strftime("%Y-%m-%d")
     cursor.execute(
         """
         SELECT p.id_producto, p.nombre_producto, v.cantidad, v.precio * v.cantidad as total
@@ -181,7 +183,7 @@ def ventas_del_dia():
         JOIN productos p ON v.id_producto = p.id_producto
         WHERE v.fecha_registro = ?
         """,
-        (hoy,),
+        (fecha,),
     )
     ventas = cursor.fetchall()
     conn.close()
@@ -289,3 +291,21 @@ def registrar_compra(
         )
     conn.commit()
     conn.close()
+
+
+def ventas_por_semana(fecha_inicio, fecha_fin):
+    conn = conectar()
+    cur = conn.cursor()
+    cur.execute(
+        """
+        SELECT v.fecha_registro, v.id_producto, p.nombre_producto, v.cantidad, v.precio * v.cantidad as total
+        FROM ventas v
+        JOIN productos p ON v.id_producto = p.id_producto
+        WHERE date(v.fecha_registro) BETWEEN date(?) AND date(?)
+        ORDER BY v.fecha_registro ASC
+    """,
+        (fecha_inicio, fecha_fin),
+    )
+    ventas = cur.fetchall()
+    conn.close()
+    return ventas
