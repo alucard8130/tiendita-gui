@@ -1,12 +1,16 @@
 [Setup]
 AppName=Mini Market POS
 AppVersion=1.0
+AppPublisher=Jaime M. Estrada Bernabé
+AppPublisherURL=https://paginaweb-ro9v.onrender.com/
+AppSupportURL=https://paginaweb-ro9v.onrender.com
 DefaultDirName={localappdata}\Mini Market POS
 DefaultGroupName=Mini Market POS
 OutputBaseFilename=MiniMarketPOSSetup
 Compression=lzma
 SolidCompression=yes
-DisableProgramGroupPage=yes
+DisableProgramGroupPage=no
+
 
 [Files]
 Source: "C:\Users\smart\OneDrive\Escritorio\tiendita-gui\dist\MiniMarketPOS.exe"; DestDir: "{app}"; Flags: ignoreversion
