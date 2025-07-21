@@ -1,112 +1,276 @@
-
 import sqlite3
 from datetime import datetime
 import os
 
-APPDATA_DIR = os.path.join(os.getenv("APPDATA"), "MiniMarketPOS")
-os.makedirs(APPDATA_DIR, exist_ok=True)
 
-DB_NAME = os.path.join(APPDATA_DIR, "tiendita.db")
+def registrar_compra(
+    nombre_producto,
+    descripcion_producto,
+    marca_producto,
+    cantidad,
+    costo,
+    precio=None,
+    codigo_barras=None,
+    imagen_producto=None,
+    proveedor=None,
+):
+    """
+    Registra una compra y actualiza el stock_final y status del producto correspondiente.
+    Si el producto no existe, no hace nada (puedes adaptar para crear el producto si lo deseas).
+    """
+    conn = conectar()
+    cursor = conn.cursor()
+    fecha_registro = datetime.now().strftime("%Y-%m-%d")
+    # Registrar la compra
+    cursor.execute(
+        """
+        INSERT INTO compras (
+            nombre_producto, descripcion_producto, marca_producto, cantidad, costo, precio, codigo_barras, imagen_producto, proveedor, fecha_registro
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            nombre_producto,
+            descripcion_producto,
+            marca_producto,
+            cantidad,
+            costo,
+            precio,
+            codigo_barras,
+            imagen_producto,
+            proveedor,
+            fecha_registro,
+        ),
+    )
+    # Actualizar stock y status en productos
+    cursor.execute(
+        "SELECT id_producto, stock_final FROM productos WHERE nombre_producto = ?",
+        (nombre_producto,),
+    )
+    prod = cursor.fetchone()
+    if prod:
+        id_producto, stock_final = prod
+        nuevo_stock = stock_final + cantidad
+        status = (
+            "agotado"
+            if nuevo_stock == 0
+            else ("on_stock" if nuevo_stock > 0 else "sobrevendido")
+        )
+        cursor.execute(
+            "UPDATE productos SET stock_final = ?, status = ? WHERE id_producto = ?",
+            (nuevo_stock, status, id_producto),
+        )
+    else:
+        # Si el producto no existe, lo creamos con los datos de la compra
+        cursor.execute(
+            """
+            INSERT INTO productos (
+                nombre_producto, marca_producto, stock_inicial, costo_compra, precio_venta, descripcion, stock_final, codigo_barras, imagen_producto, status
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                nombre_producto,
+                marca_producto,
+                cantidad,  # stock_inicial
+                costo,
+                precio,
+                descripcion_producto,
+                cantidad,  # stock_final
+                codigo_barras,
+                imagen_producto,
+                "on_stock" if cantidad > 0 else "agotado",
+            ),
+        )
+    conn.commit()
+    conn.close()
+
+
+# config produccion
+# APPDATA_DIR = os.path.join(os.getenv("APPDATA"), "MiniMarketPOS")
+# os.makedirs(APPDATA_DIR, exist_ok=True)
+# DB_NAME = os.path.join(APPDATA_DIR, "tiendita.db")
+
 
 def conectar():
-    return sqlite3.connect(DB_NAME)
+    # return sqlite3.connect(DB_NAME) #produccion
+    return sqlite3.connect("tiendita.db")  # Usar base de datos local para pruebas
+
 
 def inicializar_db():
     conn = conectar()
     cursor = conn.cursor()
 
-    cursor.execute('''
+    cursor.execute(
+        """
         CREATE TABLE IF NOT EXISTS productos (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            codigo TEXT UNIQUE NOT NULL,
-            nombre TEXT NOT NULL,
-            precio REAL NOT NULL,
-            stock INTEGER NOT NULL
+            id_producto INTEGER PRIMARY KEY AUTOINCREMENT,
+            nombre_producto TEXT NOT NULL,
+            marca_producto TEXT,
+            stock_inicial INTEGER NOT NULL,
+            costo_compra REAL NOT NULL,
+            precio_venta REAL,
+            descripcion TEXT,
+            stock_final INTEGER NOT NULL,
+            codigo_barras TEXT UNIQUE,
+            imagen_producto BLOB,
+            status TEXT
         )
-    ''')
+    """
+    )
 
-    cursor.execute('''
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS compras (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nombre_producto TEXT NOT NULL,
+            descripcion_producto TEXT NOT NULL,
+            marca_producto TEXT,
+            cantidad INTEGER NOT NULL,
+            costo REAL NOT NULL,
+            precio REAL,
+            codigo_barras TEXT,
+            imagen_producto BLOB,
+            proveedor TEXT,
+            fecha_registro TEXT NOT NULL
+        )
+    """
+    )
+
+    cursor.execute(
+        """
         CREATE TABLE IF NOT EXISTS ventas (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            fecha TEXT NOT NULL,
-            producto_id INTEGER NOT NULL,
+            id_producto INTEGER NOT NULL,
             cantidad INTEGER NOT NULL,
-            total REAL NOT NULL,
-            FOREIGN KEY (producto_id) REFERENCES productos(id)
+            precio REAL NOT NULL,
+            forma_cobro TEXT DEFAULT 'efectivo',
+            fecha_registro TEXT NOT NULL,
+            FOREIGN KEY (id_producto) REFERENCES productos(id_producto)
         )
-    ''')
+    """
+    )
 
     conn.commit()
     conn.close()
+
 
 def agregar_producto(codigo, nombre, precio, stock):
     conn = conectar()
     cursor = conn.cursor()
     try:
-        cursor.execute("INSERT INTO productos (codigo, nombre, precio, stock) VALUES (?, ?, ?, ?)",
-                       (codigo, nombre, precio, stock))
+        cursor.execute(
+            """
+            INSERT INTO productos (
+                nombre_producto, marca_producto, stock_inicial, costo_compra, precio_venta, descripcion, stock_final, codigo_barras, imagen_producto, status
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                nombre,  # nombre_producto
+                None,  # marca_producto
+                stock,  # stock_inicial
+                0.0,  # costo_compra (debe ser obligatorio en UI)
+                precio,  # precio_venta
+                None,  # descripcion
+                stock,  # stock_final (igual al inicial al crear)
+                codigo,  # codigo_barras
+                None,  # imagen_producto
+                "on_stock" if stock > 0 else "agotado",  # status
+            ),
+        )
         conn.commit()
     except sqlite3.IntegrityError:
         raise Exception("El código ya existe")
     finally:
         conn.close()
 
+
 def obtener_productos():
     conn = conectar()
     cursor = conn.cursor()
-    cursor.execute("SELECT id, codigo, nombre, precio, stock FROM productos")
+    cursor.execute(
+        "SELECT id_producto, nombre_producto, marca_producto, stock_inicial, costo_compra, precio_venta, descripcion, stock_final, codigo_barras, status FROM productos"
+    )
     productos = cursor.fetchall()
     conn.close()
     return productos
 
-def registrar_venta(codigo, cantidad):
+
+def registrar_venta(id_producto, cantidad):
     conn = conectar()
     cursor = conn.cursor()
-    cursor.execute("SELECT id, nombre, precio, stock FROM productos WHERE codigo = ?", (codigo,))
+    cursor.execute(
+        "SELECT id_producto, nombre_producto, precio_venta, stock_final FROM productos WHERE id_producto = ?",
+        (id_producto,),
+    )
     producto = cursor.fetchone()
     if producto:
         id_prod, nombre, precio, stock = producto
+        # Si el precio es None, la función debe recibir el precio como argumento
         if stock >= cantidad:
+            # Si el precio es None, usar el precio ingresado en la venta
+            if precio is None:
+                # Buscar el precio ingresado en la venta desde la llamada (main.py lo calcula)
+                # Para compatibilidad, obtener el precio desde la variable global temporal
+                from inspect import currentframe
+
+                frame = currentframe().f_back
+                precio_input = frame.f_locals.get("precio", None)
+                if precio_input is not None:
+                    precio = precio_input
+                    # Actualizar el precio en la base de datos
+                    cursor.execute(
+                        "UPDATE productos SET precio_venta = ? WHERE id_producto = ?",
+                        (precio, id_prod),
+                    )
             total = precio * cantidad
-            nueva_fecha = datetime.now().strftime('%Y-%m-%d')
-            cursor.execute("INSERT INTO ventas (fecha, producto_id, cantidad, total) VALUES (?, ?, ?, ?)",
-                           (nueva_fecha, id_prod, cantidad, total))
-            cursor.execute("UPDATE productos SET stock = stock - ? WHERE id = ?", (cantidad, id_prod))
+            nueva_fecha = datetime.now().strftime("%Y-%m-%d")
+            cursor.execute(
+                "INSERT INTO ventas (id_producto, cantidad, precio, fecha_registro) VALUES (?, ?, ?, ?)",
+                (id_prod, cantidad, precio, nueva_fecha),
+            )
+            nuevo_stock = stock - cantidad
+            status = (
+                "agotado"
+                if nuevo_stock == 0
+                else ("on_stock" if nuevo_stock > 0 else "sobrevendido")
+            )
+            cursor.execute(
+                "UPDATE productos SET stock_final = ?, status = ? WHERE id_producto = ?",
+                (nuevo_stock, status, id_prod),
+            )
             conn.commit()
             conn.close()
             return nombre, total, precio
     conn.close()
     return None, None, None
 
+
 def ventas_del_dia():
     conn = conectar()
     cursor = conn.cursor()
-    hoy = datetime.now().strftime('%Y-%m-%d')
-    cursor.execute('''
-        SELECT p.codigo, p.nombre, v.cantidad, v.total
+    hoy = datetime.now().strftime("%Y-%m-%d")
+    cursor.execute(
+        """
+        SELECT p.id_producto, p.nombre_producto, v.cantidad, v.precio * v.cantidad as total
         FROM ventas v
-        JOIN productos p ON v.producto_id = p.id
-        WHERE v.fecha = ?
-    ''', (hoy,))
+        JOIN productos p ON v.id_producto = p.id_producto
+        WHERE v.fecha_registro = ?
+        """,
+        (hoy,),
+    )
     ventas = cursor.fetchall()
     conn.close()
     return ventas
 
 
-def generar_ticket(codigo, nombre, cantidad, precio_unitario, total):
-    hoy = datetime.now().strftime('%Y%m%d_%H%M%S')
-    nombre_archivo = f"ticket_{codigo}_{hoy}.txt"
-
-    tickets_folder = os.path.join(APPDATA_DIR, "tickets")
-    os.makedirs(tickets_folder, exist_ok=True)
-
-    ruta = os.path.join(tickets_folder, nombre_archivo)
-
+def generar_ticket(id_producto, nombre, cantidad, precio_unitario, total):
+    hoy = datetime.now().strftime("%Y%m%d_%H%M%S")
+    nombre_archivo = f"ticket_{id_producto}_{hoy}.txt"
+    ruta = "tickets/" + nombre_archivo
     with open(ruta, "w", encoding="utf-8") as f:
         f.write("==== MINI MARKET POS ====\n")
         f.write(f"Fecha: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
         f.write("--------------------------\n")
-        f.write(f"Código: {codigo}\n")
+        f.write(f"ID producto: {id_producto}\n")
         f.write(f"Producto: {nombre}\n")
         f.write(f"Cantidad: {cantidad}\n")
         f.write(f"Precio unitario: ${precio_unitario:.2f}\n")

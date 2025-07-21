@@ -1,0 +1,10 @@
+==== MINI MARKET POS ====
+Fecha: 2025-07-20 21:18:21
+--------------------------
+ID producto: 1
+Producto: papas
+Cantidad: 1
+Precio unitario: $20.00
+Total: $20.00
+==========================
+¡Gracias por su compra!

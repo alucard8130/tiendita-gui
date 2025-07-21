@@ -1,0 +1,10 @@
+==== MINI MARKET POS ====
+Fecha: 2025-07-20 21:42:56
+--------------------------
+ID producto: 2
+Producto: cocacola
+Cantidad: 1
+Precio unitario: $15.00
+Total: $15.00
+==========================
+¡Gracias por su compra!
