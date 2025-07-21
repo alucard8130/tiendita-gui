@@ -5,7 +5,7 @@ import database
 import csv
 from tkinter import filedialog
 from datetime import datetime, timedelta
-
+import webbrowser
 # Inicializar base de datos al arrancar
 database.inicializar_db()
 
@@ -600,8 +600,6 @@ def ventana_reporte_semanal():
 
 def main():
     def abrir_web():
-        import webbrowser
-
         webbrowser.open_new("https://paginaweb-ro9v.onrender.com")
 
     root = tk.Tk()
@@ -612,7 +610,7 @@ def main():
     # Centrar ventana y deshabilitar movimiento
     root.update_idletasks()
     width = 900
-    height = 560
+    height = 650
     x = (root.winfo_screenwidth() // 2) - (width // 2)
     y = (root.winfo_screenheight() // 2) - (height // 2)
     root.geometry(f"{width}x{height}+{x}+{y}")
@@ -643,11 +641,9 @@ def main():
 
     # Footer moderno con copyright y web
     def abrir_web():
-        import webbrowser
-
         webbrowser.open_new(
             "https://paginaweb-ro9v.onrender.com"
-        )  # Cambia por tu URL real
+        )  
 
     footer = ttk.Frame(root)
     footer.pack(side="bottom", fill="x", pady=(15, 0))
@@ -688,8 +684,7 @@ def main():
     ).pack(pady=6)
 
     def abrir_actualizacion_web():
-        import webbrowser
-
+   
         webbrowser.open_new("https://paginaweb-ro9v.onrender.com")
 
     ttk.Button(
@@ -728,7 +723,6 @@ def main():
         ).pack(pady=5)
 
         def abrir_paypal():
-            import webbrowser
 
             webbrowser.open_new(
                 "https://paypal.me/mareb?country.x=MX&locale.x=es_XC"
