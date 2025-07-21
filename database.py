@@ -85,14 +85,14 @@ def registrar_compra(
 
 
 # config produccion
-# APPDATA_DIR = os.path.join(os.getenv("APPDATA"), "MiniMarketPOS")
-# os.makedirs(APPDATA_DIR, exist_ok=True)
-# DB_NAME = os.path.join(APPDATA_DIR, "tiendita.db")
+APPDATA_DIR = os.path.join(os.getenv("APPDATA"), "MiniMarketPOS")
+os.makedirs(APPDATA_DIR, exist_ok=True)
+DB_NAME = os.path.join(APPDATA_DIR, "tiendita.db")
 
 
 def conectar():
-    # return sqlite3.connect(DB_NAME) #produccion
-    return sqlite3.connect("tiendita.db")  # Usar base de datos local para pruebas
+     return sqlite3.connect(DB_NAME) #produccion
+   # return sqlite3.connect("tiendita.db")  # Usar base de datos local para pruebas
 
 
 def inicializar_db():

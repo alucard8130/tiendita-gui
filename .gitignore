@@ -6,13 +6,6 @@ __pycache__/
 *.pyd
 *.db
 *.sqlite3
-*.log
-*.env
-*.DS_Store
-*.vscode/
-*.idea/
-*.egg-info/
-*.egg
-*.zip   
-
-
+/build/
+/dist/
+*.spec
