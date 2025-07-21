@@ -2,97 +2,23 @@ import sqlite3
 from datetime import datetime
 import os
 
+DB_LOCAL = "tiendita.db"
 
-def registrar_compra(
-    nombre_producto,
-    descripcion_producto,
-    marca_producto,
-    cantidad,
-    costo,
-    precio=None,
-    codigo_barras=None,
-    imagen_producto=None,
-    proveedor=None,
-):
-    """
-    Registra una compra y actualiza el stock_final y status del producto correspondiente.
-    Si el producto no existe, no hace nada (puedes adaptar para crear el producto si lo deseas).
-    """
-    conn = conectar()
-    cursor = conn.cursor()
-    fecha_registro = datetime.now().strftime("%Y-%m-%d")
-    # Registrar la compra
-    cursor.execute(
-        """
-        INSERT INTO compras (
-            nombre_producto, descripcion_producto, marca_producto, cantidad, costo, precio, codigo_barras, imagen_producto, proveedor, fecha_registro
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """,
-        (
-            nombre_producto,
-            descripcion_producto,
-            marca_producto,
-            cantidad,
-            costo,
-            precio,
-            codigo_barras,
-            imagen_producto,
-            proveedor,
-            fecha_registro,
-        ),
-    )
-    # Actualizar stock y status en productos
-    cursor.execute(
-        "SELECT id_producto, stock_final FROM productos WHERE nombre_producto = ?",
-        (nombre_producto,),
-    )
-    prod = cursor.fetchone()
-    if prod:
-        id_producto, stock_final = prod
-        nuevo_stock = stock_final + cantidad
-        status = (
-            "agotado"
-            if nuevo_stock == 0
-            else ("on_stock" if nuevo_stock > 0 else "sobrevendido")
-        )
-        cursor.execute(
-            "UPDATE productos SET stock_final = ?, status = ? WHERE id_producto = ?",
-            (nuevo_stock, status, id_producto),
-        )
-    else:
-        # Si el producto no existe, lo creamos con los datos de la compra
-        cursor.execute(
-            """
-            INSERT INTO productos (
-                nombre_producto, marca_producto, stock_inicial, costo_compra, precio_venta, descripcion, stock_final, codigo_barras, imagen_producto, status
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                nombre_producto,
-                marca_producto,
-                cantidad,  # stock_inicial
-                costo,
-                precio,
-                descripcion_producto,
-                cantidad,  # stock_final
-                codigo_barras,
-                imagen_producto,
-                "on_stock" if cantidad > 0 else "agotado",
-            ),
-        )
-    conn.commit()
-    conn.close()
-
-
-# config produccion
 APPDATA_DIR = os.path.join(os.getenv("APPDATA"), "MiniMarketPOS")
 os.makedirs(APPDATA_DIR, exist_ok=True)
-DB_NAME = os.path.join(APPDATA_DIR, "tiendita.db")
+
+DB_PROD = os.path.join(APPDATA_DIR, "tiendita.db")
+
+# Alterna entre local y producción con una variable o 
+#default 0 = usa la base de produccion
+USE_LOCAL_DB = os.getenv("TIENDITA_LOCAL_DB", "0") == "1"
 
 
 def conectar():
-     return sqlite3.connect(DB_NAME) #produccion
-   # return sqlite3.connect("tiendita.db")  # Usar base de datos local para pruebas
+    if USE_LOCAL_DB:
+        return sqlite3.connect(DB_LOCAL)
+    else:
+        return sqlite3.connect(DB_PROD)
 
 
 def inicializar_db():
@@ -265,7 +191,10 @@ def ventas_del_dia():
 def generar_ticket(id_producto, nombre, cantidad, precio_unitario, total):
     hoy = datetime.now().strftime("%Y%m%d_%H%M%S")
     nombre_archivo = f"ticket_{id_producto}_{hoy}.txt"
-    ruta = "tickets/" + nombre_archivo
+    tickets_folder = "tickets"
+    if not os.path.exists(tickets_folder):
+        os.makedirs(tickets_folder)
+    ruta = os.path.join(tickets_folder, nombre_archivo)
     with open(ruta, "w", encoding="utf-8") as f:
         f.write("==== MINI MARKET POS ====\n")
         f.write(f"Fecha: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
@@ -279,3 +208,84 @@ def generar_ticket(id_producto, nombre, cantidad, precio_unitario, total):
         f.write("¡Gracias por su compra!\n")
 
     return ruta
+
+
+def registrar_compra(
+    nombre_producto,
+    descripcion_producto,
+    marca_producto,
+    cantidad,
+    costo,
+    precio=None,
+    codigo_barras=None,
+    imagen_producto=None,
+    proveedor=None,
+):
+    """
+    Registra una compra y actualiza el stock_final y status del producto correspondiente.
+    Si el producto no existe, no hace nada (puedes adaptar para crear el producto si lo deseas).
+    """
+    conn = conectar()
+    cursor = conn.cursor()
+    fecha_registro = datetime.now().strftime("%Y-%m-%d")
+    # Registrar la compra
+    cursor.execute(
+        """
+        INSERT INTO compras (
+            nombre_producto, descripcion_producto, marca_producto, cantidad, costo, precio, codigo_barras, imagen_producto, proveedor, fecha_registro
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            nombre_producto,
+            descripcion_producto,
+            marca_producto,
+            cantidad,
+            costo,
+            precio,
+            codigo_barras,
+            imagen_producto,
+            proveedor,
+            fecha_registro,
+        ),
+    )
+    # Actualizar stock y status en productos
+    cursor.execute(
+        "SELECT id_producto, stock_final FROM productos WHERE nombre_producto = ?",
+        (nombre_producto,),
+    )
+    prod = cursor.fetchone()
+    if prod:
+        id_producto, stock_final = prod
+        nuevo_stock = stock_final + cantidad
+        status = (
+            "agotado"
+            if nuevo_stock == 0
+            else ("on_stock" if nuevo_stock > 0 else "sobrevendido")
+        )
+        cursor.execute(
+            "UPDATE productos SET stock_final = ?, status = ? WHERE id_producto = ?",
+            (nuevo_stock, status, id_producto),
+        )
+    else:
+        # Si el producto no existe, lo creamos con los datos de la compra
+        cursor.execute(
+            """
+            INSERT INTO productos (
+                nombre_producto, marca_producto, stock_inicial, costo_compra, precio_venta, descripcion, stock_final, codigo_barras, imagen_producto, status
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                nombre_producto,
+                marca_producto,
+                cantidad,  # stock_inicial
+                costo,
+                precio,
+                descripcion_producto,
+                cantidad,  # stock_final
+                codigo_barras,
+                imagen_producto,
+                "on_stock" if cantidad > 0 else "agotado",
+            ),
+        )
+    conn.commit()
+    conn.close()
